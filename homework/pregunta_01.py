@@ -71,3 +71,43 @@ def pregunta_01():
 
 
     """
+
+    import pandas as pd
+    import glob
+    import os
+
+    def loadData(inputPath):
+
+        data = []
+
+        for sentimentPath in glob.glob(os.path.join(inputPath, "*")):
+            if not os.path.isdir(sentimentPath):
+                continue
+
+            sentiment = os.path.basename(sentimentPath)
+
+            for filePath in glob.glob(os.path.join(sentimentPath, "*.txt")):
+                with open(filePath, "r") as file:
+                    phrase = file.read().strip()
+                    data.append({"phrase": phrase, "target": sentiment})
+
+            df = pd.DataFrame(data)
+
+        return df
+
+    def createOutputDirectory(outputPath):
+        if os.path.exists(outputPath):
+            for file in glob.glob(f"{outputPath}/*"):
+                os.remove(file)
+            os.rmdir(outputPath)
+        os.makedirs(outputPath)
+
+    def saveData(df, outputPath):
+        df.to_csv(outputPath, index=False)
+
+    dfTrain = loadData("files/input/train")
+    dfTest = loadData("files/input/test")
+
+    createOutputDirectory("files/output")
+    saveData(dfTrain, "files/output/train_dataset.csv")
+    saveData(dfTest, "files/output/test_dataset.csv")
