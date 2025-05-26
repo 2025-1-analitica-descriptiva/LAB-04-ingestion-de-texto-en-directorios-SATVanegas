@@ -6,6 +6,11 @@ Escriba el codigo que ejecute la accion solicitada en cada pregunta.
 """
 
 
+
+import os
+import zipfile
+import pandas as pd
+
 def pregunta_01():
     """
     La información requerida para este laboratio esta almacenada en el
@@ -68,46 +73,41 @@ def pregunta_01():
     |  3 | Both operating profit and net sales for the three-month period increased , respectively from EUR16 .0 m and EUR139m , as compared to the corresponding quarter in 2006 | positive |
     |  4 | Tampere Science Parks is a Finnish company that owns , leases and builds office properties and it specialises in facilities for technology-oriented businesses         | neutral  |
     ```
-
-
     """
 
-    import pandas as pd
-    import glob
-    import os
-
-    def loadData(inputPath):
-
+    os.makedirs("files/output", exist_ok=True)
+    
+    # Check if input directory exists, if not extract the zip file
+    if not os.path.exists("files/input"):
+        with zipfile.ZipFile("files/input.zip", "r") as zip_ref:
+            zip_ref.extractall("files")
+    
+    # Process each dataset (train and test)
+    for dataset_type in ["train", "test"]:
         data = []
+        
+        # Process each sentiment directory
+        for sentiment in ["positive", "negative", "neutral"]:
+            sentiment_dir = os.path.join("files/input", dataset_type, sentiment)
+            
+            # Process each file in the sentiment directory
+            for filename in os.listdir(sentiment_dir):
+                if filename.endswith(".txt"):
+                    file_path = os.path.join(sentiment_dir, filename)
+                    
+                    # Read the phrase from the file
+                    with open(file_path, "r", encoding="utf-8") as file:
+                        phrase = file.read().strip()
+                    
+                    # Add to data list
+                    data.append({
+                        "phrase": phrase,
+                        "target": sentiment
+                    })
+        
+        # Create DataFrame and save to CSV
+        df = pd.DataFrame(data)
+        output_file = os.path.join("files/output", f"{dataset_type}_dataset.csv")
+        df.to_csv(output_file, index=False)
 
-        for sentimentPath in glob.glob(os.path.join(inputPath, "*")):
-            if not os.path.isdir(sentimentPath):
-                continue
-
-            sentiment = os.path.basename(sentimentPath)
-
-            for filePath in glob.glob(os.path.join(sentimentPath, "*.txt")):
-                with open(filePath, "r") as file:
-                    phrase = file.read().strip()
-                    data.append({"phrase": phrase, "target": sentiment})
-
-            df = pd.DataFrame(data)
-
-        return df
-
-    def createOutputDirectory(outputPath):
-        if os.path.exists(outputPath):
-            for file in glob.glob(f"{outputPath}/*"):
-                os.remove(file)
-            os.rmdir(outputPath)
-        os.makedirs(outputPath)
-
-    def saveData(df, outputPath):
-        df.to_csv(outputPath, index=False)
-
-    dfTrain = loadData("files/input/train")
-    dfTest = loadData("files/input/test")
-
-    createOutputDirectory("files/output")
-    saveData(dfTrain, "files/output/train_dataset.csv")
-    saveData(dfTest, "files/output/test_dataset.csv")
+    return
